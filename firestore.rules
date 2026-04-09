@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isChatParticipant(chatData) {
+      return request.auth.uid == chatData.userId ||
+             request.auth.uid == chatData.providerId;
+    }
+
+    function chatExists(chatId) {
+      return exists(/databases/$(database)/documents/chats/$(chatId));
+    }
+
+    function isParticipantOfChat(chatId) {
+      let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+      return request.auth.uid == chat.userId || request.auth.uid == chat.providerId;
+    }
+
+    // ── Users collection ──────────────────────────
+    match /users/{userId} {
+      // Anyone logged in can read public profile fields (not phone)
+      allow read: if isLoggedIn();
+
+      // Only owner or admin can write
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Providers collection ──────────────────────
+    match /providers/{providerId} {
+      // Anyone logged in can read approved providers
+      allow read: if isLoggedIn();
+
+      // Only the owning user can create their own provider profile
+      allow create: if isLoggedIn() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Owner can update availability, pic, etc. Admin can update verification
+      allow update: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Chats collection ─────────────────────────
+    match /chats/{chatId} {
+      allow read: if isLoggedIn() && (isChatParticipant(resource.data) || isAdmin());
+
+      // Any logged-in user can create a chat (with themselves as userId)
+      allow create: if isLoggedIn() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Only participants or admin can update (e.g., agreement state, status)
+      allow update: if isLoggedIn() && (isChatParticipant(resource.data) || isAdmin());
+
+      allow delete: if isAdmin();
+
+      // ── Messages subcollection ─────────────────
+      match /messages/{messageId} {
+        // Only chat participants or admin can read/write messages
+        allow read, write: if isLoggedIn() && (isParticipantOfChat(chatId) || isAdmin());
+      }
+    }
+
+    // ── Jobs collection ──────────────────────────
+    match /jobs/{jobId} {
+      allow read: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if isLoggedIn();
+      allow update: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // ── Ratings collection ───────────────────────
+    match /ratings/{ratingId} {
+      allow read: if isLoggedIn();
+      // Only the "from" user can create a rating
+      allow create: if isLoggedIn() &&
+        request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Notifications ─────────────────────────────
+    match /notifications/{notifId} {
+      // Recipient or admin can read
+      allow read: if isLoggedIn() && (
+        resource.data.toUserId == request.auth.uid || isAdmin()
+      );
+
+      // Admin (or Cloud Functions) can create notifications
+      allow create: if isAdmin();
+
+      // Only recipient can mark as read
+      allow update: if isLoggedIn() &&
+        resource.data.toUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    // ── Reports ──────────────────────────────────
+    match /reports/{reportId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isLoggedIn();
+    }
+
+    // ── Broadcast Jobs ───────────────────────────
+    match /broadcast_jobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
