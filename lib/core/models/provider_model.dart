@@ -27,6 +27,17 @@ extension ServiceCategoryExtension on ServiceCategory {
         ServiceCategory.cleaner => 'Cleaner',
       };
 
+  String get labelUrdu => switch (this) {
+        ServiceCategory.electrician => 'الیکٹریشن',
+        ServiceCategory.plumber => 'پلمبر',
+        ServiceCategory.tailor => 'درزی',
+        ServiceCategory.teacher => 'استاد',
+        ServiceCategory.carpenter => 'بڑھئی',
+        ServiceCategory.mechanic => 'میکینک',
+        ServiceCategory.painter => 'پینٹر',
+        ServiceCategory.cleaner => 'کلینر',
+      };
+
   String get emoji => switch (this) {
         ServiceCategory.electrician => '⚡',
         ServiceCategory.plumber => '🚿',
@@ -55,7 +66,7 @@ class ProviderModel {
   final String id;
   final String userId;
   final ProviderType type;
-  final ServiceCategory category;
+  final String categoryId;
   final String area;
   final double rating;
   final int jobsCompleted;
@@ -69,7 +80,7 @@ class ProviderModel {
     required this.id,
     required this.userId,
     required this.type,
-    required this.category,
+    required this.categoryId,
     required this.area,
     this.rating = 5.0,
     this.jobsCompleted = 0,
@@ -89,10 +100,7 @@ class ProviderModel {
         (t) => t.name == (d['type'] ?? 'individual'),
         orElse: () => ProviderType.individual,
       ),
-      category: ServiceCategory.values.firstWhere(
-        (c) => c.name == (d['category'] ?? 'electrician'),
-        orElse: () => ServiceCategory.electrician,
-      ),
+      categoryId: d['categoryId'] ?? d['category'] ?? 'electrician',
       area: d['area'] ?? '',
       rating: (d['rating'] ?? 5.0).toDouble(),
       jobsCompleted: d['jobsCompleted'] ?? 0,
@@ -110,7 +118,7 @@ class ProviderModel {
   Map<String, dynamic> toFirestore() => {
         'userId': userId,
         'type': type.name,
-        'category': category.name,
+        'categoryId': categoryId,
         'area': area,
         'rating': rating,
         'jobsCompleted': jobsCompleted,
@@ -134,7 +142,7 @@ class ProviderModel {
         id: id,
         userId: userId,
         type: type,
-        category: category,
+        categoryId: categoryId,
         area: area,
         rating: rating ?? this.rating,
         jobsCompleted: jobsCompleted ?? this.jobsCompleted,

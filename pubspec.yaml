@@ -35,18 +35,23 @@ dependencies:
   # Routing
   go_router: ^13.0.0
 
-  # Utils
+  # utils
   intl: ^0.19.0
   shared_preferences: ^2.2.2
   uuid: ^4.3.3
 
-  # Phone number formatting
-  libphonenumber_plugin: ^0.3.1
+  # Path utils (added for StorageService)
+  path: ^1.9.0
+  path_provider: ^2.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+dependency_overrides:
+  path_provider_android: 2.2.12
+  permission_handler_android: 12.0.2
 
 flutter:
   uses-material-design: true

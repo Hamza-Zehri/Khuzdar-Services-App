@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
@@ -73,7 +74,15 @@ class InboxScreen extends StatelessWidget {
                       onTap: () {
                         // Mark as read
                         docs[i].reference.update({'read': true});
-                        // TODO: Navigate based on type
+                        
+                        final type = d['type'];
+                        final relatedId = d['relatedId'];
+
+                        if (type == 'message' && relatedId != null) {
+                          context.push('/chat/$relatedId');
+                        } else if (type == 'job' && relatedId != null) {
+                          // context.push('/job/$relatedId'); // Future job screen
+                        }
                       },
                     );
                   },

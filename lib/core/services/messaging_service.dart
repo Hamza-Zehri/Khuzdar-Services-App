@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// Background message handler — must be top-level function
 @pragma('vm:entry-point')
@@ -19,35 +20,47 @@ class MessagingService {
   static const _channelName = 'Marketplace Notifications';
 
   Future<void> initialize() async {
-    // Request permissions (Android 13+)
-    await _fcm.requestPermission(alert: true, badge: true, sound: true);
+    try {
+      // Request permissions (Android 13+)
+      await _fcm.requestPermission(alert: true, badge: true, sound: true);
+    } catch (e) {
+      debugPrint('FCM Permission Error: $e');
+    }
 
-    // Local notifications channel (Android)
-    await _localNotifications.initialize(
-      const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      ),
-    );
+    try {
+      // Local notifications channel (Android)
+      await _localNotifications.initialize(
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        ),
+      );
 
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            _channelId,
-            _channelName,
-            importance: Importance.high,
-          ),
-        );
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _channelId,
+              _channelName,
+              importance: Importance.high,
+            ),
+          );
+    } catch (e) {
+      debugPrint('Local Notifications Init Error: $e');
+    }
 
-    // Save FCM token to Firestore
-    await _saveFcmToken();
+    try {
+      // Save FCM token to Firestore
+      await _saveFcmToken();
 
-    // Foreground message handling
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      // Foreground message handling
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // Background handler (must be set before runApp)
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      // Background handler (must be set before runApp)
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint('Messaging handlers setup Error: $e');
+    }
   }
 
   Future<void> _saveFcmToken() async {
@@ -77,7 +90,7 @@ class MessagingService {
       notification.hashCode,
       notification.title,
       notification.body,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,

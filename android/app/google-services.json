@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "462613436846",
+    "firebase_url": "https://khuzdar-services-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "khuzdar-services",
     "storage_bucket": "khuzdar-services.firebasestorage.app"
   },

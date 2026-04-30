@@ -22,10 +22,18 @@ class AuthService {
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
       verificationCompleted: onAutoVerified,
-      verificationFailed: onError,
-      codeSent: (verificationId, resendToken) {
-        _verificationId = verificationId;
-        onCodeSent(verificationId);
+      verificationFailed: (FirebaseAuthException e) {
+        // Detailed internal logging
+        // debugPrint('🔥 Firebase Auth Error [${e.code}]: ${e.message}');
+        // if (e.code == 'app-not-authorized') {
+        //   debugPrint('TIP: This means SHA-1 fingerprints are missing in Firebase Console.');
+        // }
+        onError(e);
+      },
+      codeSent: (String vid, int? resendToken) {
+        _verificationId = vid;
+        // debugPrint('✅ OTP Sent successfully. ID: $vid');
+        onCodeSent(vid);
       },
       codeAutoRetrievalTimeout: (_) {},
     );
@@ -41,11 +49,21 @@ class AuthService {
     return await _auth.signInWithCredential(credential);
   }
 
+  // Email/Password Auth
+  Future<UserCredential> loginWithEmail(String email, String password) async {
+    return await _auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  Future<UserCredential> signUpWithEmail(String email, String password) async {
+    return await _auth.createUserWithEmailAndPassword(email: email, password: password);
+  }
+
   // Step 3: Create or fetch user profile in Firestore
   Future<UserModel?> createOrFetchUser({
     required String uid,
     required String phone,
     String name = '',
+    String? address,
     UserRole role = UserRole.customer,
   }) async {
     final docRef = _db.collection('users').doc(uid);
@@ -61,9 +79,13 @@ class AuthService {
       name: name,
       phone: phone,
       role: role,
+      address: address,
       createdAt: DateTime.now(),
     );
-    await docRef.set(user.toFirestore());
+    await _db.collection('users').doc(uid).set(
+      user.toFirestore(),
+      SetOptions(merge: true),
+    );
     return user;
   }
 
@@ -73,7 +95,11 @@ class AuthService {
   }
 
   Future<void> updateUserRole(String uid, UserRole role) async {
-    await _db.collection('users').doc(uid).update({'role': role.name});
+    await _db.collection('users').doc(uid).set({
+      'role': role.name,
+      'id': uid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> signOut() async {

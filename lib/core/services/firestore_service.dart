@@ -3,28 +3,63 @@ import 'package:uuid/uuid.dart';
 import '../models/all_models.dart';
 
 class FirestoreService {
+  // ── Singleton ──────────────────────────────────────────
+  static final FirestoreService _instance = FirestoreService._internal();
+  factory FirestoreService() => _instance;
+  FirestoreService._internal();
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
+
+  // Call once at app startup
+  static void initializeSettings() {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,          // Disk cache for offline + speed
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
 
   // ── Providers ──────────────────────────────
 
   Future<void> createProvider(ProviderModel provider) async {
-    await _db.collection('providers').doc(provider.id).set(provider.toFirestore());
+    // Use userId as the document ID for 1:1 reliability
+    await _db.collection('providers').doc(provider.userId).set(
+      provider.toFirestore(),
+      SetOptions(merge: true),
+    );
   }
 
-  Stream<List<ProviderModel>> streamProvidersByCategory(ServiceCategory category) {
+  Stream<List<CategoryModel>> streamCategories() {
+    return _db.collection('categories')
+        .where('isEnabled', isEqualTo: true)
+        .orderBy('order')
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => CategoryModel.fromFirestore(d)).toList());
+  }
+
+  Stream<List<ProviderModel>> streamProvidersByCategory(String categoryId) {
     return _db
         .collection('providers')
-        .where('category', isEqualTo: category.name)
+        .where('categoryId', isEqualTo: categoryId)
         .where('verificationStatus', isEqualTo: 'approved')
-        .orderBy('isAvailable', descending: true)
-        .orderBy('rating', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map(ProviderModel.fromFirestore).toList());
+        .map((snap) {
+      final list = snap.docs.map(ProviderModel.fromFirestore).toList();
+      // Sort locally to avoid "Missing Index" errors
+      list.sort((a, b) => b.rating.compareTo(a.rating));
+      return list;
+    });
   }
 
   Future<void> toggleProviderAvailability(String providerId, bool isAvailable) async {
     await _db.collection('providers').doc(providerId).update({'isAvailable': isAvailable});
+  }
+
+  Stream<ProviderModel?> streamProvider(String uid) {
+    return _db.collection('providers')
+        .doc(uid)
+        .snapshots()
+        .map((snap) => snap.exists ? ProviderModel.fromFirestore(snap) : null);
   }
 
   Future<void> updateProviderVerification(String providerId, VerificationStatus status) async {
@@ -32,6 +67,14 @@ class FirestoreService {
         .collection('providers')
         .doc(providerId)
         .update({'verificationStatus': status.name});
+  }
+
+  Future<void> updateUserFields(String uid, Map<String, dynamic> fields) async {
+    await _db.collection('users').doc(uid).update(fields);
+  }
+
+  Future<void> updateProviderFields(String uid, Map<String, dynamic> fields) async {
+    await _db.collection('providers').doc(uid).update(fields);
   }
 
   // ── Chats ──────────────────────────────────
@@ -191,6 +234,10 @@ class FirestoreService {
     await _db.collection('chats').doc(chatId).update(update);
   }
 
+  Future<void> updateChatStatus(String chatId, ChatStatus status) async {
+    await _db.collection('chats').doc(chatId).update({'status': status.name});
+  }
+
   // ── Jobs ───────────────────────────────────
 
   Future<JobModel> createJob({
@@ -282,11 +329,33 @@ class FirestoreService {
     await _db.collection('users').doc(userId).update({'isBlocked': false});
   }
 
+  Future<UserModel?> getUser(String uid) async {
+    final snap = await _db.collection('users').doc(uid).get();
+    return snap.exists ? UserModel.fromFirestore(snap) : null;
+  }
+
+  Future<void> updateUserAddress(String uid, String address) async {
+    await _db.collection('users').doc(uid).update({'address': address});
+  }
+
   Stream<List<ProviderModel>> streamPendingProviders() {
     return _db
         .collection('providers')
         .where('verificationStatus', isEqualTo: 'pending')
         .snapshots()
         .map((snap) => snap.docs.map(ProviderModel.fromFirestore).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> streamBroadcastJobs() {
+    return _db.collection('broadcast_jobs')
+        .where('status', isEqualTo: 'completed')
+        .orderBy('createdAt', descending: true)
+        .limit(10)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) {
+              final data = d.data();
+              data['id'] = d.id;
+              return data;
+            }).toList());
   }
 }

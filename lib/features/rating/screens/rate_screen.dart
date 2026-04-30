@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/models/all_models.dart';
+import '../../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RateScreen extends StatefulWidget {
   final String jobId;
@@ -102,9 +107,44 @@ class _RateScreenState extends State<RateScreen> {
   }
 
   Future<void> _submit() async {
+    final auth = context.read<AuthAppProvider>();
+    final currentUid = auth.uid;
+    if (currentUid == null) return;
+
     setState(() => _loading = true);
-    // Submit logic
-    setState(() => _loading = false);
-    if (mounted) context.pop();
+    
+    try {
+      final firestore = FirestoreService();
+      // 1. Fetch job to know who we are rating
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).get();
+      if (jobDoc.exists) {
+        final job = JobModel.fromFirestore(jobDoc);
+        final toUserId = (currentUid == job.userId) ? job.providerId : job.userId;
+
+        // 2. Submit rating
+        await firestore.submitRating(
+          fromUserId: currentUid,
+          toUserId: toUserId,
+          jobId: widget.jobId,
+          rating: _rating,
+          comment: _commentController.text.trim(),
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Shukriya! Aapki rating submit ho gayi.')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rating submit nahi hui: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }

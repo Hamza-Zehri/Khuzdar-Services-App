@@ -5,7 +5,9 @@ import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key});
+  final Map<String, String> registrationData;
+
+  const OtpScreen({super.key, required this.registrationData});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -104,19 +106,33 @@ class _OtpScreenState extends State<OtpScreen> {
 
     final auth = context.read<AuthAppProvider>();
     final success = await auth.verifyOTP(_otp);
-    setState(() => _loading = false);
-
-    if (!mounted) return;
+    
     if (success) {
-      if (auth.hasProfile) {
-        context.go('/home');
-      } else {
+      // Phone verified! Now complete the full registration
+      final regData = widget.registrationData;
+      final emailSuccess = await auth.completeRegistration(
+        email: regData['email'] ?? '',
+        password: regData['password'] ?? '',
+        name: regData['name'] ?? '',
+        phone: regData['phone'] ?? '',
+        address: regData['address'] ?? '',
+      );
+
+      setState(() => _loading = false);
+      if (emailSuccess && mounted) {
         context.go('/auth/role');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration fail hui. Email shayed pehle se use ho raha hai.')),
+        );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Code galat hai, dobara try karein')),
-      );
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Code galat hai, dobara try karein')),
+        );
+      }
     }
   }
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../core/models/provider_model.dart';
-import '../../../core/models/user_model.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/language_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/models/all_models.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -20,9 +21,9 @@ class HomeScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text('Khuzdar Services'),
+            Text(context.tr('app_name')),
             Text(
-              'Khuzdar, Balochistan',
+              context.isUrdu ? 'خضدار، بلوچستان' : 'Khuzdar, Balochistan',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -75,12 +76,14 @@ class HomeScreen extends StatelessWidget {
             children: [
               // Greeting
               Text(
-                'Salam, ${auth.user?.name ?? 'Guest'}! 👋',
+                auth.user != null
+                    ? context.tr('welcome_greeting', args: [auth.user!.name])
+                    : (context.isUrdu ? 'خوش آمدید، مہمان' : 'Welcome, Guest'),
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 4),
               Text(
-                'Kya kaam chahiye aaj?',
+                context.tr('home_prompt'),
                 style: Theme.of(context)
                     .textTheme
                     .bodyLarge
@@ -89,21 +92,41 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Category grid — large tappable buttons
+              // Category grid — dynamically loaded from Firestore
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                  ),
-                  itemCount: ServiceCategory.values.length,
-                  itemBuilder: (context, i) {
-                    final cat = ServiceCategory.values[i];
-                    return _CategoryButton(
-                      category: cat,
-                      onTap: () => context.push('/providers/${cat.name}'),
+                child: StreamBuilder<List<CategoryModel>>(
+                  stream: FirestoreService().streamCategories(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    
+                    final categories = snapshot.data ?? [];
+                    
+                    if (categories.isEmpty) {
+                      return Center(
+                        child: Text(
+                          context.isUrdu ? 'کوئی کیٹیگری دستیاب نہیں' : 'No categories available',
+                          style: const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      );
+                    }
+
+                    return GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.1,
+                      ),
+                      itemCount: categories.length,
+                      itemBuilder: (context, i) {
+                        final cat = categories[i];
+                        return _CategoryButton(
+                          category: cat,
+                          onTap: () => context.push('/providers/${cat.id}'),
+                        );
+                      },
                     );
                   },
                 ),
@@ -129,7 +152,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _CategoryButton extends StatelessWidget {
-  final ServiceCategory category;
+  final CategoryModel category;
   final VoidCallback onTap;
 
   const _CategoryButton({required this.category, required this.onTap});
@@ -153,7 +176,7 @@ class _CategoryButton extends StatelessWidget {
               Text(category.emoji, style: const TextStyle(fontSize: 40)),
               const SizedBox(height: 8),
               Text(
-                category.label,
+                context.isUrdu ? category.labelUrdu : category.label,
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),

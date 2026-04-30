@@ -4,3 +4,4 @@ export 'chat_model.dart';
 export 'message_model.dart';
 export 'job_model.dart';
 export 'rating_model.dart';
+export 'category_model.dart';

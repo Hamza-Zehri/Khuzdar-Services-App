@@ -10,6 +10,7 @@ class UserModel {
   final double rating;
   final int totalJobs;
   final String? profilePic;
+  final String? address;
   final bool isBlocked;
   final String language; // 'en' | 'ur'
   final bool isVisibleOnline;
@@ -23,6 +24,7 @@ class UserModel {
     this.rating = 5.0,
     this.totalJobs = 0,
     this.profilePic,
+    this.address,
     this.isBlocked = false,
     this.language = 'en',
     this.isVisibleOnline = true,
@@ -42,6 +44,7 @@ class UserModel {
       rating: (d['rating'] ?? 5.0).toDouble(),
       totalJobs: d['totalJobs'] ?? 0,
       profilePic: d['profilePic'],
+      address: d['address'],
       isBlocked: d['isBlocked'] ?? false,
       language: d['language'] ?? 'en',
       isVisibleOnline: d['isVisibleOnline'] ?? true,
@@ -56,6 +59,7 @@ class UserModel {
         'rating': rating,
         'totalJobs': totalJobs,
         'profilePic': profilePic,
+        'address': address,
         'isBlocked': isBlocked,
         'language': language,
         'isVisibleOnline': isVisibleOnline,
@@ -75,6 +79,7 @@ class UserModel {
     double? rating,
     int? totalJobs,
     String? profilePic,
+    String? address,
     bool? isBlocked,
     String? language,
     bool? isVisibleOnline,
@@ -87,6 +92,7 @@ class UserModel {
         rating: rating ?? this.rating,
         totalJobs: totalJobs ?? this.totalJobs,
         profilePic: profilePic ?? this.profilePic,
+        address: address ?? this.address,
         isBlocked: isBlocked ?? this.isBlocked,
         language: language ?? this.language,
         isVisibleOnline: isVisibleOnline ?? this.isVisibleOnline,

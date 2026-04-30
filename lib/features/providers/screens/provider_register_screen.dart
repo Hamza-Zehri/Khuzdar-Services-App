@@ -5,7 +5,6 @@ import '../../../core/models/all_models.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
-import 'package:uuid/uuid.dart';
 
 class ProviderRegisterScreen extends StatefulWidget {
   const ProviderRegisterScreen({super.key});
@@ -17,7 +16,7 @@ class ProviderRegisterScreen extends StatefulWidget {
 class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   ProviderType _type = ProviderType.individual;
-  ServiceCategory _category = ServiceCategory.electrician;
+  String _category = 'electrician';
   String _area = 'Khuzdar City';
   final _shopNameController = TextEditingController();
   final _shopAddressController = TextEditingController();
@@ -70,16 +69,29 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
               // Category
               const Text('Service Category', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              DropdownButtonFormField<ServiceCategory>(
-                value: _category,
-                decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
-                items: ServiceCategory.values.map((c) {
-                  return DropdownMenuItem(
-                    value: c,
-                    child: Text('${c.emoji} ${c.label}'),
+              StreamBuilder<List<CategoryModel>>(
+                stream: FirestoreService().streamCategories(),
+                builder: (context, snapshot) {
+                  final categories = snapshot.data ?? [];
+                  
+                  // If we have categories but the current _category isn't one of them,
+                  // we might want to default it. But since we initialized it to 'electrician',
+                  // we'll keep it unless the user changes it or we find a better default.
+
+                  return DropdownButtonFormField<String>(
+                    initialValue: categories.any((c) => c.id == _category) ? _category : (categories.isNotEmpty ? categories.first.id : null),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+                    items: categories.map((c) {
+                      return DropdownMenuItem(
+                        value: c.id,
+                        child: Text('${c.emoji} ${c.label}'),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _category = v);
+                    },
                   );
-                }).toList(),
-                onChanged: (v) => setState(() => _category = v!),
+                },
               ),
 
               const SizedBox(height: 24),
@@ -135,10 +147,10 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     final firestore = FirestoreService();
 
     final provider = ProviderModel(
-      id: const Uuid().v4(),
+      id: auth.uid!, // Use userId for document ID
       userId: auth.uid!,
       type: _type,
-      category: _category,
+      categoryId: _category,
       area: _area,
       shop: _type == ProviderType.shop
           ? ShopInfo(
@@ -184,7 +196,7 @@ class _TypeChoice extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surfaceVariant,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,

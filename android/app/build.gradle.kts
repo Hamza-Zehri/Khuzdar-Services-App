@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.khuzdar_marketplace"
+    namespace = "com.khuzdar.marketplace"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

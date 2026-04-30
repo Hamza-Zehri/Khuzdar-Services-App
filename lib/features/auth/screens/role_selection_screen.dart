@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../core/models/all_models.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/firestore_service.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -65,13 +67,40 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  void _selectRole(BuildContext context, UserRole role) {
-    // TODO: Update user role in Firestore
-    // For now, just navigate
-    if (role == UserRole.provider) {
-      context.push('/provider/register');
-    } else {
-      context.go('/home');
+  Future<void> _selectRole(BuildContext context, UserRole role) async {
+    try {
+      final authApp = context.read<AuthAppProvider>();
+      final uid = authApp.uid;
+      
+      if (uid != null) {
+        final authService = AuthService();
+        await authService.updateUserRole(uid, role);
+        await authApp.refreshUser(); // Sync the local profile
+      }
+
+      if (!context.mounted) return;
+
+      if (role == UserRole.provider) {
+        // Check if provider profile already exists
+        final firestoreService = FirestoreService();
+        final provider = await firestoreService.streamProvider(uid!).first;
+
+        if (!context.mounted) return;
+        if (provider != null) {
+          // Already registered — enable provider mode then go to dashboard
+          await authApp.enableProviderMode();
+          if (context.mounted) context.go('/home');
+        } else {
+          context.push('/provider/register');
+        }
+      } else {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating role: $e'), backgroundColor: AppColors.danger),
+      );
     }
   }
 }

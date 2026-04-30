@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/language_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 
 class PhoneEntryScreen extends StatefulWidget {
-  const PhoneEntryScreen({super.key});
+  final Map<String, String> registrationData;
+
+  const PhoneEntryScreen({super.key, required this.registrationData});
 
   @override
   State<PhoneEntryScreen> createState() => _PhoneEntryScreenState();
@@ -18,30 +21,22 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: Text(context.tr('register'))),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Spacer(),
-
-              // Brand
-              const Text('🏙️', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 16),
               Text(
-                'Khuzdar Services',
-                style: Theme.of(context).textTheme.headlineLarge,
+                context.tr('enter_phone'),
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                'Apna phone number daalein',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyLarge
-                    ?.copyWith(color: AppColors.textSecondary),
+                context.tr('verify_identity_sms'),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
-
               const SizedBox(height: 32),
 
               // Phone input
@@ -61,8 +56,8 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
                       controller: _controller,
                       keyboardType: TextInputType.phone,
                       maxLength: 10,
-                      decoration: const InputDecoration(
-                        hintText: '3001234567',
+                      decoration: InputDecoration(
+                        hintText: context.tr('phone_hint'),
                         counterText: '',
                       ),
                       style: const TextStyle(fontSize: 20, letterSpacing: 2),
@@ -81,18 +76,14 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
                         width: 24,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text('OTP Bhejein'),
+                    : Text(context.tr('next')),
               ),
 
-              const Spacer(flex: 2),
-
+              const SizedBox(height: 24),
               Center(
-                child: Text(
-                  'Aapka number secure rahega',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.textHint),
+                child: TextButton(
+                  onPressed: () => context.go('/'),
+                  child: Text(context.tr('already_have_account')),
                 ),
               ),
             ],
@@ -103,19 +94,23 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
   }
 
   Future<void> _sendOTP() async {
-    final phone = '+92${_controller.text.trim()}';
-    if (_controller.text.length != 10) {
+    final phone = _controller.text.trim();
+    if (phone.length != 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sahi phone number daalein')),
+        SnackBar(content: Text(context.tr('invalid_phone'))),
       );
       return;
     }
 
     setState(() => _loading = true);
     final auth = context.read<AuthAppProvider>();
-    await auth.sendOTP(phone);
+    await auth.sendOTP('+92$phone');
     setState(() => _loading = false);
 
-    if (mounted) context.push('/auth/otp');
+    if (mounted) {
+      final data = Map<String, String>.from(widget.registrationData);
+      data['phone'] = '+92$phone';
+      context.go('/auth/otp', extra: data);
+    }
   }
 }

@@ -26,12 +26,16 @@ class PresenceService {
   }
 
   Future<void> goOffline() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-    await _ref(uid).set({
-      'online': false,
-      'lastSeen': ServerValue.timestamp,
-    });
+    try {
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return;
+      await _ref(uid).set({
+        'online': false,
+        'lastSeen': ServerValue.timestamp,
+      }).timeout(const Duration(seconds: 3));
+    } catch (e) {
+      // Ignore errors on logout to prevent hanging
+    }
   }
 
   Stream<Map<String, dynamic>?> streamPresence(String uid) {
