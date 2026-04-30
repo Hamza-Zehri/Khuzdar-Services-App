@@ -15,7 +15,6 @@ class _RegisterCredentialsScreenState extends State<RegisterCredentialsScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
-  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -70,10 +69,8 @@ class _RegisterCredentialsScreenState extends State<RegisterCredentialsScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Complete Registration'),
+                onPressed: _submit,
+                child: const Text('Complete Registration'),
               ),
             ),
           ],
