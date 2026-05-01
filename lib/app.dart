@@ -52,7 +52,7 @@ class KhuzdarMarketplaceApp extends StatelessWidget {
           return null;
         }
 
-        if (!isLoggedIn) return '/home';
+        if (!isLoggedIn) return '/login';
         
         // Blocking enforcement
         if (isLoggedIn && auth.user?.isBlocked == true && loc != '/blocked') {

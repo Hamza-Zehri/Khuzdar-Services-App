@@ -6,8 +6,15 @@ import '../../../providers/language_provider.dart';
 import '../../../core/models/user_model.dart';
 import '../../../shared/theme/app_theme.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoggingOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -114,15 +121,31 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(24),
-                  child: OutlinedButton(
-                    onPressed: () => auth.signOut(),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                    child: Text(context.isUrdu ? 'لاگ آؤٹ' : 'Logout'),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: _isLoggingOut ? null : _handleLogout,
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      child: _isLoggingOut
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2),
+                            )
+                          : Text(context.isUrdu ? 'لاگ آؤٹ' : 'Logout'),
+                    ),
                   ),
                 ),
               ],
             ),
     );
+  }
+
+  Future<void> _handleLogout() async {
+    setState(() => _isLoggingOut = true);
+    await context.read<AuthAppProvider>().signOut();
+    // After logout, GoRouter redirect will handle navigation to /login
   }
 
   void _showEditDialog(BuildContext context, AuthAppProvider auth) {

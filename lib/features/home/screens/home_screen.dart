@@ -32,6 +32,11 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => context.push('/notifications'),
+            tooltip: context.isUrdu ? 'ان باکس' : 'Inbox',
+          ),
           Stack(
             children: [
               IconButton(

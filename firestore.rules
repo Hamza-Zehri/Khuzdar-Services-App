@@ -44,8 +44,8 @@ service cloud.firestore {
 
     // ── Providers collection ──────────────────────
     match /providers/{providerId} {
-      // Anyone logged in can read approved providers
-      allow read: if isLoggedIn();
+      // Anyone (including guests) can read providers — public listing
+      allow read: if true;
 
       // Only the owning user can create their own provider profile
       allow create: if isLoggedIn() &&

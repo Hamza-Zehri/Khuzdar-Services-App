@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'translations.dart';
+import '../core/i18n/translations.dart';
 
 class LanguageProvider extends ChangeNotifier {
   String _currentLocale = 'en';
@@ -42,8 +42,8 @@ class LanguageProvider extends ChangeNotifier {
 // Extension to make it easy to use in widgets: context.tr('welcome', args: ['Hamza'])
 extension TranslationExtension on BuildContext {
   String tr(String key, {List<String>? args}) {
-    return read<LanguageProvider>().translate(key, args: args);
+    return watch<LanguageProvider>().translate(key, args: args);
   }
 
-  bool get isUrdu => read<LanguageProvider>().isUrdu;
+  bool get isUrdu => watch<LanguageProvider>().isUrdu;
 }

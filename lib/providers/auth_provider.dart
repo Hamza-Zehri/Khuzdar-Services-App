@@ -101,20 +101,46 @@ class AuthAppProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithGoogle() async {
+    try {
+      final cred = await _authService.signInWithGoogle();
+      if (cred != null && cred.user != null) {
+        // Fetch profile
+        _user = await _authService.fetchUser(cred.user!.uid);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Google Login Error: $e');
+      return false;
+    }
+  }
+
   Future<bool> completeRegistration({
     required String email,
-    required String password,
+    String? password, // Now optional
     required String name,
     required String phone,
     required String address,
   }) async {
     try {
-      // 1. Create Firebase Auth account
-      final cred = await _authService.signUpWithEmail(email, password);
-      if (cred.user != null) {
-        // 2. Create Firestore profile with verified phone
+      String? targetUid;
+
+      // 1. If already logged in (Google), use existing UID
+      final currentFirebaseUser = FirebaseAuth.instance.currentUser;
+      if (currentFirebaseUser != null) {
+        targetUid = currentFirebaseUser.uid;
+      } else if (password != null) {
+        // 2. Otherwise create new Email Auth account (Legacy fallback)
+        final cred = await _authService.signUpWithEmail(email, password);
+        targetUid = cred.user?.uid;
+      }
+
+      if (targetUid != null) {
+        // 3. Create Firestore profile
         _user = await _authService.createOrFetchUser(
-          uid: cred.user!.uid,
+          uid: targetUid,
           phone: phone,
           name: name,
           address: address,

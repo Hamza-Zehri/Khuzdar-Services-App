@@ -31,6 +31,11 @@ class ProviderDashboardScreen extends StatelessWidget {
                 context.isUrdu ? 'پرووائیڈر ڈیش بورڈ' : 'Provider Dashboard'),
             actions: [
               IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                onPressed: () => context.push('/notifications'),
+                tooltip: context.isUrdu ? 'ان باکس' : 'Inbox',
+              ),
+              IconButton(
                 icon: const Icon(Icons.person_outline),
                 onPressed: () =>
                     context.read<AuthAppProvider>().toggleProviderMode(),

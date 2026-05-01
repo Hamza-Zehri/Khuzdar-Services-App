@@ -1,15 +1,49 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+
+  AuthService() {
+    // Explicitly initialize with serverClientId to prevent "Sign in failed"
+    _googleSignIn.initialize(
+      serverClientId: '462613436846-5fp1pbj1ghafhshi5le1ptfl86njntim.apps.googleusercontent.com',
+    );
+  }
 
   String? _verificationId;
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // New: Sign in with Google
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // Ensure initialized (v7.x requirement)
+      // Note: In some versions this is required, in others it's internal.
+      // But using .authenticate() on the instance is correct.
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      
+      // In google_sign_in v7.x+, authentication is a getter and only contains idToken
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      
+      // To get the accessToken, we use the authorizationClient
+      final authz = await googleUser.authorizationClient.authorizationForScopes(['email', 'profile']);
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: authz?.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      throw Exception('Google Sign-In failed: $e');
+    }
+  }
 
   // Step 1: Send OTP
   Future<void> sendOTP({
