@@ -12,18 +12,21 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // JWT custom-claim check. Request-level → can authorize list/aggregation queries.
+    function isAdminToken() {
+      return isLoggedIn() && request.auth.token.admin == true;
+    }
+
+    // Full admin check (document-level operations may use get()).
+    // get() cannot authorize queries, so list rules use isAdminToken() instead.
     function isAdmin() {
-      return isLoggedIn() &&
+      return isAdminToken() ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isChatParticipant(chatData) {
       return request.auth.uid == chatData.userId ||
              request.auth.uid == chatData.providerId;
-    }
-
-    function chatExists(chatId) {
-      return exists(/databases/$(database)/documents/chats/$(chatId));
     }
 
     function isParticipantOfChat(chatId) {
@@ -61,7 +64,15 @@ service cloud.firestore {
 
     // ── Chats collection ─────────────────────────
     match /chats/{chatId} {
-      allow read: if isLoggedIn() && (isChatParticipant(resource.data) || isAdmin());
+      // doc-level read
+      allow get: if isLoggedIn() && (isChatParticipant(resource.data) || isAdmin());
+
+      // query-level read: participant filters their own chats, admins read all
+      allow list: if isLoggedIn() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.providerId ||
+        isAdminToken()
+      );
 
       // Any logged-in user can create a chat (with themselves as userId)
       allow create: if isLoggedIn() &&
@@ -75,16 +86,23 @@ service cloud.firestore {
       // ── Messages subcollection ─────────────────
       match /messages/{messageId} {
         // Only chat participants or admin can read/write messages
-        allow read, write: if isLoggedIn() && (isParticipantOfChat(chatId) || isAdmin());
+        allow get, write: if isLoggedIn() && (isParticipantOfChat(chatId) || isAdmin());
+        allow list: if isLoggedIn() && (isParticipantOfChat(chatId) || isAdminToken());
       }
     }
 
     // ── Jobs collection ──────────────────────────
     match /jobs/{jobId} {
-      allow read: if isLoggedIn() && (
+      allow get: if isLoggedIn() && (
         resource.data.userId == request.auth.uid ||
         resource.data.providerId == request.auth.uid ||
         isAdmin()
+      );
+
+      allow list: if isLoggedIn() && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.providerId ||
+        isAdminToken()
       );
 
       allow create: if isLoggedIn();
@@ -106,9 +124,14 @@ service cloud.firestore {
 
     // ── Notifications ─────────────────────────────
     match /notifications/{notifId} {
-      // Recipient or admin can read
-      allow read: if isLoggedIn() && (
+      // Recipient or admin can read (doc-level)
+      allow get: if isLoggedIn() && (
         resource.data.toUserId == request.auth.uid || isAdmin()
+      );
+
+      // Recipient or admin can query their own notifications
+      allow list: if isLoggedIn() && (
+        request.auth.uid == resource.data.toUserId || isAdminToken()
       );
 
       // Admin (or Cloud Functions) can create notifications
@@ -122,13 +145,17 @@ service cloud.firestore {
 
     // ── Reports ──────────────────────────────────
     match /reports/{reportId} {
-      allow read, update, delete: if isAdmin();
+      allow get: if isAdmin();
+      allow list: if isAdminToken();
       allow create: if isLoggedIn();
+      allow update, delete: if isAdmin();
     }
 
     // ── Broadcast Jobs ───────────────────────────
     match /broadcast_jobs/{jobId} {
-      allow read, write: if isAdmin();
+      allow get: if isAdmin();
+      allow list: if isAdminToken();
+      allow create, update, delete: if isAdmin();
     }
 
     // ── Categories collection ────────────────────
