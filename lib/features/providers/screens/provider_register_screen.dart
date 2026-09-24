@@ -40,7 +40,8 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
               const SizedBox(height: 24),
 
               // Type
-              const Text('Aap kis tarah kaam karte hain?', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Aap kis tarah kaam karte hain?',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -49,7 +50,8 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                       label: 'Individual',
                       icon: Icons.person_outline,
                       isSelected: _type == ProviderType.individual,
-                      onTap: () => setState(() => _type = ProviderType.individual),
+                      onTap: () =>
+                          setState(() => _type = ProviderType.individual),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -67,20 +69,24 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
               const SizedBox(height: 24),
 
               // Category
-              const Text('Service Category', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Service Category',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               StreamBuilder<List<CategoryModel>>(
                 stream: FirestoreService().streamCategories(),
                 builder: (context, snapshot) {
                   final categories = snapshot.data ?? [];
-                  
+
                   // If we have categories but the current _category isn't one of them,
                   // we might want to default it. But since we initialized it to 'electrician',
                   // we'll keep it unless the user changes it or we find a better default.
 
                   return DropdownButtonFormField<String>(
-                    initialValue: categories.any((c) => c.id == _category) ? _category : (categories.isNotEmpty ? categories.first.id : null),
-                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+                    initialValue: categories.any((c) => c.id == _category)
+                        ? _category
+                        : (categories.isNotEmpty ? categories.first.id : null),
+                    decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16)),
                     items: categories.map((c) {
                       return DropdownMenuItem(
                         value: c.id,
@@ -98,7 +104,8 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
 
               // Shop specific fields
               if (_type == ProviderType.shop) ...[
-                const Text('Shop Details', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('Shop Details',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _shopNameController,
@@ -108,18 +115,21 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _shopAddressController,
-                  decoration: const InputDecoration(hintText: 'Shop ka pata (Address)'),
+                  decoration:
+                      const InputDecoration(hintText: 'Shop ka pata (Address)'),
                   validator: (v) => v!.isEmpty ? 'Pata lazmi hai' : null,
                 ),
                 const SizedBox(height: 24),
               ],
 
               // Area
-              const Text('Ilaqa (Area)', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Ilaqa (Area)',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextFormField(
                 initialValue: _area,
-                decoration: const InputDecoration(hintText: 'Example: Jinnah Road, Khuzdar'),
+                decoration: const InputDecoration(
+                    hintText: 'Example: Jinnah Road, Khuzdar'),
                 onChanged: (v) => _area = v,
                 validator: (v) => v!.isEmpty ? 'Area lazmi hai' : null,
               ),
@@ -145,32 +155,53 @@ class _ProviderRegisterScreenState extends State<ProviderRegisterScreen> {
     setState(() => _loading = true);
     final auth = context.read<AuthAppProvider>();
     final firestore = FirestoreService();
+    final uid = auth.uid;
 
-    final provider = ProviderModel(
-      id: auth.uid!, // Use userId for document ID
-      userId: auth.uid!,
-      type: _type,
-      categoryId: _category,
-      area: _area,
-      shop: _type == ProviderType.shop
-          ? ShopInfo(
-              shopName: _shopNameController.text.trim(),
-              shopAddress: _shopAddressController.text.trim(),
-            )
-          : null,
-      createdAt: DateTime.now(),
-    );
+    try {
+      if (uid == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please login first')),
+          );
+        }
+        return;
+      }
 
-    await firestore.createProvider(provider);
-    // Also update user role to provider if it was customer
-    await auth.signOut(); // Force re-login or refresh to see new role
-
-    setState(() => _loading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application submit ho gayi! Admin verify karega.')),
+      final provider = ProviderModel(
+        id: uid, // Use userId for document ID
+        userId: uid,
+        type: _type,
+        categoryId: _category,
+        area: _area,
+        shop: _type == ProviderType.shop
+            ? ShopInfo(
+                shopName: _shopNameController.text.trim(),
+                shopAddress: _shopAddressController.text.trim(),
+              )
+            : null,
+        createdAt: DateTime.now(),
       );
-      context.go('/auth/phone');
+
+      await firestore.createProvider(provider);
+
+      // Keep the user signed in — they are already a provider by now.
+      await auth.enableProviderMode();
+      await auth.refreshUser();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Application submit ho gayi! Admin verify karega.')),
+      );
+      context.go('/home');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Application submit nahi hui: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 }
@@ -196,7 +227,9 @@ class _TypeChoice extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceVariant,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppColors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,
@@ -205,7 +238,9 @@ class _TypeChoice extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : AppColors.textSecondary),
+            Icon(icon,
+                color:
+                    isSelected ? AppColors.primary : AppColors.textSecondary),
             const SizedBox(height: 4),
             Text(
               label,

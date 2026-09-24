@@ -17,7 +17,8 @@ class StorageService {
       if (compressed == null) return null;
 
       final ref = _storage.ref('profiles/$uid/avatar.jpg');
-      await ref.putFile(compressed, SettableMetadata(contentType: 'image/jpeg'));
+      await ref.putFile(
+          compressed, SettableMetadata(contentType: 'image/jpeg'));
       return await ref.getDownloadURL();
     } catch (e) {
       return null;
@@ -26,7 +27,8 @@ class StorageService {
 
   Future<File?> _compress(File file) async {
     final dir = await getTemporaryDirectory();
-    final targetPath = p.join(dir.path, '${DateTime.now().millisecondsSinceEpoch}_compressed.jpg');
+    final targetPath = p.join(
+        dir.path, '${DateTime.now().millisecondsSinceEpoch}_compressed.jpg');
 
     final result = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,

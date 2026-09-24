@@ -6,6 +6,7 @@ import '../../../providers/language_provider.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/models/all_models.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/section_header.dart';
 
 class ProviderDashboardScreen extends StatelessWidget {
   const ProviderDashboardScreen({super.key});
@@ -157,6 +158,51 @@ class ProviderDashboardScreen extends StatelessWidget {
                 ),
 
                 Text(
+                  context.isUrdu ? 'نئی درخواستیں' : 'New Requests',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+
+                // Pending requests awaiting accept/reject
+                StreamBuilder<List<ChatModel>>(
+                  stream: firestoreService.streamProviderChats(auth.uid ?? ''),
+                  builder: (context, chatSnapshot) {
+                    final chats = (chatSnapshot.data ?? [])
+                        .where((c) => c.status == ChatStatus.requested)
+                        .toList();
+
+                    if (chatSnapshot.connectionState ==
+                            ConnectionState.waiting &&
+                        chats.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (chats.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          context.isUrdu
+                              ? 'کوئی نیا طلب نہیں ہے۔'
+                              : 'No pending requests.',
+                          style: const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: chats.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) =>
+                          _RequestTile(chat: chats[index]),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+
+                Text(
                   context.isUrdu ? 'فعال بات چیت' : 'Active Chats',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
@@ -171,7 +217,9 @@ class ProviderDashboardScreen extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final chats = chatSnapshot.data ?? [];
+                    final chats = (chatSnapshot.data ?? [])
+                        .where((c) => c.status != ChatStatus.requested)
+                        .toList();
                     if (chats.isEmpty) {
                       return Center(
                         child: Padding(
@@ -214,6 +262,100 @@ class ProviderDashboardScreen extends StatelessWidget {
   }
 }
 
+class _RequestTile extends StatelessWidget {
+  final ChatModel chat;
+  const _RequestTile({required this.chat});
+
+  @override
+  Widget build(BuildContext context) {
+    final firestore = FirestoreService();
+    return Card(
+      child: FutureBuilder<UserModel?>(
+        future: firestore.getUser(chat.userId),
+        builder: (context, snapshot) {
+          final user = snapshot.data;
+          return Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: user?.profilePic != null
+                          ? NetworkImage(user!.profilePic!)
+                          : null,
+                      child: user?.profilePic == null
+                          ? Text(user?.name.characters.firstOrNull?.toUpperCase() ?? '?')
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        user?.name ?? 'Customer',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const PillBadge(
+                      text: 'New',
+                      icon: Icons.notifications_active,
+                      color: AppColors.warning,
+                    ),
+                  ],
+                ),
+                if (chat.lastMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    chat.lastMessage!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            firestore.acceptChat(chat.id).then((_) {
+                          if (context.mounted) {
+                            context.push('/chat/${chat.id}');
+                          }
+                        }),
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Accept'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.online,
+                          minimumSize: const Size(0, 42),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => firestore.rejectChat(chat.id),
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Reject'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                          side: const BorderSide(color: AppColors.danger),
+                          minimumSize: const Size(0, 42),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ChatTile extends StatelessWidget {
   final ChatModel chat;
   const _ChatTile({required this.chat});
@@ -242,11 +384,37 @@ class _ChatTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _StatusBadge(status: chat.status),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
           onTap: () => GoRouter.of(context).push('/chat/${chat.id}'),
         );
       },
     );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final ChatStatus status;
+
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = switch (status) {
+      ChatStatus.requested => ('New', AppColors.warning, Icons.pending),
+      ChatStatus.chatting => ('Chat', AppColors.info, Icons.chat_bubble_outline),
+      ChatStatus.agreed => ('Tayyar', AppColors.accent, Icons.handshake_outlined),
+      ChatStatus.contactVisible => ('Active', AppColors.online, Icons.work),
+      ChatStatus.completed => ('Done', AppColors.primary, Icons.verified),
+      ChatStatus.cancelled => ('Closed', AppColors.textMuted, Icons.block),
+    };
+    return PillBadge(text: label, color: color, icon: icon);
   }
 }
 
@@ -281,7 +449,8 @@ class _StatCard extends StatelessWidget {
                 style:
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             Text(label,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
           ],
         ),
       ),

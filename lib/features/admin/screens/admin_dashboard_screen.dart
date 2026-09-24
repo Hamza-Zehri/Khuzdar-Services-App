@@ -21,7 +21,9 @@ class AdminDashboardScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.isUrdu ? 'زیر التوا درخواستیں' : 'Pending Provider Requests',
+              context.isUrdu
+                  ? 'زیر التوا درخواستیں'
+                  : 'Pending Provider Requests',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -34,7 +36,9 @@ class AdminDashboardScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
-                        context.isUrdu ? 'کوئی نئی درخواست نہیں' : 'No pending requests',
+                        context.isUrdu
+                            ? 'کوئی نئی درخواست نہیں'
+                            : 'No pending requests',
                         style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
@@ -79,7 +83,13 @@ class _PendingProviderCard extends StatelessWidget {
               subtitle: StreamBuilder<List<CategoryModel>>(
                 stream: firestore.streamCategories(),
                 builder: (context, snap) {
-                  final cat = (snap.data ?? []).firstWhere((c) => c.id == provider.categoryId, orElse: () => CategoryModel(id: provider.categoryId, label: provider.categoryId, labelUrdu: '', emoji: ''));
+                  final cat = (snap.data ?? []).firstWhere(
+                      (c) => c.id == provider.categoryId,
+                      orElse: () => CategoryModel(
+                          id: provider.categoryId,
+                          label: provider.categoryId,
+                          labelUrdu: '',
+                          emoji: ''));
                   return Text('${cat.label} • ${provider.area}');
                 },
               ),
@@ -90,13 +100,17 @@ class _PendingProviderCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => firestore.updateProviderVerification(provider.userId, VerificationStatus.rejected),
-                  child: const Text('Reject', style: TextStyle(color: Colors.red)),
+                  onPressed: () => firestore.updateProviderVerification(
+                      provider.userId, VerificationStatus.rejected),
+                  child:
+                      const Text('Reject', style: TextStyle(color: Colors.red)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () => firestore.updateProviderVerification(provider.userId, VerificationStatus.approved),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.online),
+                  onPressed: () => firestore.updateProviderVerification(
+                      provider.userId, VerificationStatus.approved),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.online),
                   child: const Text('Approve'),
                 ),
               ],

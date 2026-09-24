@@ -44,7 +44,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthAppProvider(languageProvider: languageProvider)),
+        ChangeNotifierProvider(
+            create: (_) => AuthAppProvider(languageProvider: languageProvider)),
         ChangeNotifierProvider(create: (_) => ChatAppProvider()),
         ChangeNotifierProvider(create: (_) => NotificationAppProvider()),
         ChangeNotifierProvider.value(value: languageProvider),

@@ -7,6 +7,8 @@ import '../../../core/services/presence_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/login_required_dialog.dart';
+import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/section_header.dart';
 
 class ProviderListScreen extends StatelessWidget {
   final String category;
@@ -23,7 +25,11 @@ class ProviderListScreen extends StatelessWidget {
           stream: service.streamCategories(),
           builder: (context, snap) {
             final categories = snap.data ?? [];
-            final cat = categories.firstWhere((c) => c.id == category, orElse: () => CategoryModel(id: category, label: category, labelUrdu: '', emoji: '📁'));
+            final cat = categories.firstWhere(
+              (c) => c.id == category,
+              orElse: () => CategoryModel(
+                  id: category, label: category, labelUrdu: '', emoji: '📁'),
+            );
             return Text('${cat.emoji} ${cat.label}');
           },
         ),
@@ -32,11 +38,10 @@ class ProviderListScreen extends StatelessWidget {
         stream: service.streamProvidersByCategory(category),
         builder: (context, snap) {
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Error: ${snap.error}\n\nSearch index shayed pending ho.'),
-              ),
+            return ErrorView(
+              message:
+                  'Something went wrong.\nPlease check your connection and try again.',
+              onRetry: () {},
             );
           }
 
@@ -47,18 +52,10 @@ class ProviderListScreen extends StatelessWidget {
           final providers = snap.data ?? [];
 
           if (providers.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('😔', style: TextStyle(fontSize: 48)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Is ilaqe mein koi available nahi',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
+            return const EmptyView(
+              icon: Icons.search_off_rounded,
+              message: 'No providers yet',
+              detail: 'Be the first to offer this service in your area!',
             );
           }
 
@@ -66,7 +63,10 @@ class ProviderListScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: providers.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, i) => _ProviderCard(provider: providers[i]),
+            itemBuilder: (context, i) => _ProviderCard(
+              category: category,
+              provider: providers[i],
+            ),
           );
         },
       ),
@@ -75,9 +75,10 @@ class ProviderListScreen extends StatelessWidget {
 }
 
 class _ProviderCard extends StatefulWidget {
+  final String category;
   final ProviderModel provider;
 
-  const _ProviderCard({required this.provider});
+  const _ProviderCard({required this.category, required this.provider});
 
   @override
   State<_ProviderCard> createState() => _ProviderCardState();
@@ -89,15 +90,19 @@ class _ProviderCardState extends State<_ProviderCard> {
   @override
   Widget build(BuildContext context) {
     final provider = widget.provider;
-    final presence = PresenceService();
+    final isShop = provider.type == ProviderType.shop;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: InkWell(
+        onTap: () => context.push(
+            '/providers/${widget.category}/${provider.userId}'),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
               children: [
                 // Avatar with type badge
                 Stack(
@@ -110,14 +115,14 @@ class _ProviderCardState extends State<_ProviderCard> {
                           : null,
                       child: provider.profilePic == null
                           ? Text(
-                              provider.type == ProviderType.shop ? '🏪' : '👤',
+                              isShop ? '🏪' : '👤',
                               style: const TextStyle(fontSize: 22),
                             )
                           : null,
                     ),
                     // Online badge
                     StreamBuilder<Map<String, dynamic>?>(
-                      stream: presence.streamPresence(provider.userId),
+                      stream: PresenceService().streamPresence(provider.userId),
                       builder: (context, snap) {
                         final isOnline = snap.data?['online'] == true;
                         return Positioned(
@@ -127,7 +132,9 @@ class _ProviderCardState extends State<_ProviderCard> {
                             width: 14,
                             height: 14,
                             decoration: BoxDecoration(
-                              color: isOnline ? AppColors.online : AppColors.offline,
+                              color: isOnline
+                                  ? AppColors.online
+                                  : AppColors.offline,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                             ),
@@ -147,33 +154,33 @@ class _ProviderCardState extends State<_ProviderCard> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              provider.type == ProviderType.shop
-                                  ? provider.shop?.shopName ?? 'Shop'
-                                  : 'Provider',
-                              style: Theme.of(context).textTheme.titleMedium,
-                              overflow: TextOverflow.ellipsis,
+                            child: FutureBuilder<UserModel?>(
+                              future:
+                                  FirestoreService().getUser(provider.userId),
+                              builder: (context, snap) {
+                                final name = isShop
+                                    ? (provider.shop?.shopName ?? 'Shop')
+                                    : (snap.data?.name ??
+                                        (context.read<AuthAppProvider>().uid ==
+                                                provider.userId
+                                            ? 'You'
+                                            : 'Provider'));
+                                return Text(
+                                  name,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
                             ),
                           ),
-                          // Type badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: provider.type == ProviderType.shop
-                                  ? AppColors.info.withValues(alpha: 0.1)
-                                  : AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              provider.type == ProviderType.shop ? '🏪 Shop' : '👤 Individual',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: provider.type == ProviderType.shop
-                                    ? AppColors.info
-                                    : AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          const SizedBox(width: 8),
+                          PillBadge(
+                            text: isShop ? 'Shop' : 'Individual',
+                            icon: isShop
+                                ? Icons.storefront_outlined
+                                : Icons.person_outline,
+                            color: isShop ? AppColors.info : AppColors.primary,
                           ),
                         ],
                       ),
@@ -216,33 +223,12 @@ class _ProviderCardState extends State<_ProviderCard> {
 
                 const Spacer(),
 
-                // Availability
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: provider.isAvailable
-                        ? AppColors.online.withValues(alpha: 0.1)
-                        : AppColors.offline.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        size: 8,
-                        color: provider.isAvailable ? AppColors.online : AppColors.offline,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        provider.isAvailable ? 'Available' : 'Busy',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: provider.isAvailable ? AppColors.online : AppColors.offline,
-                        ),
-                      ),
-                    ],
-                  ),
+                PillBadge(
+                  text: provider.isAvailable ? 'Available' : 'Busy',
+                  icon: Icons.circle,
+                  color: provider.isAvailable
+                      ? AppColors.online
+                      : AppColors.offline,
                 ),
               ],
             ),
@@ -259,12 +245,13 @@ class _ProviderCardState extends State<_ProviderCard> {
                           strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.chat_bubble_outline, size: 20),
-              label: Text(_startingChat ? 'Ruko...' : 'Chat Shuru Karein'),
+              label: Text(_startingChat ? 'Please wait...' : 'Start Chat'),
               onPressed: provider.isAvailable && !_startingChat
                   ? () => _startChat()
                   : null,
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -275,6 +262,13 @@ class _ProviderCardState extends State<_ProviderCard> {
     final currentUserId = auth.uid;
     if (currentUserId == null) {
       LoginRequiredDialog.show(context);
+      return;
+    }
+
+    if (currentUserId == widget.provider.userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot chat with yourself.')),
+      );
       return;
     }
 
@@ -291,7 +285,7 @@ class _ProviderCardState extends State<_ProviderCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chat shuru nahi hui: $e')),
+          SnackBar(content: Text('Could not start chat: $e')),
         );
       }
     } finally {

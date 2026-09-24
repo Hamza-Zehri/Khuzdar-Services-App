@@ -12,6 +12,8 @@ class UserModel {
   final String? profilePic;
   final String? address;
   final bool isBlocked;
+  final String? blockReason; // 'admin' | 'auto_provider_rating' | 'auto_client_review'
+  final int badReviewsGiven; // 1-2 star ratings this client has given
   final String language; // 'en' | 'ur'
   final bool isVisibleOnline;
   final DateTime createdAt;
@@ -26,6 +28,8 @@ class UserModel {
     this.profilePic,
     this.address,
     this.isBlocked = false,
+    this.blockReason,
+    this.badReviewsGiven = 0,
     this.language = 'en',
     this.isVisibleOnline = true,
     required this.createdAt,
@@ -46,6 +50,8 @@ class UserModel {
       profilePic: d['profilePic'],
       address: d['address'],
       isBlocked: d['isBlocked'] ?? false,
+      blockReason: d['blockReason'],
+      badReviewsGiven: d['badReviewsGiven'] ?? 0,
       language: d['language'] ?? 'en',
       isVisibleOnline: d['isVisibleOnline'] ?? true,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -61,6 +67,8 @@ class UserModel {
         'profilePic': profilePic,
         'address': address,
         'isBlocked': isBlocked,
+        'blockReason': blockReason,
+        'badReviewsGiven': badReviewsGiven,
         'language': language,
         'isVisibleOnline': isVisibleOnline,
         'createdAt': Timestamp.fromDate(createdAt),
@@ -74,6 +82,9 @@ class UserModel {
 
   bool get isLowRated => rating < 2.0 && totalJobs >= 3;
 
+  bool get isAutoBlocked =>
+      blockReason != null && blockReason != 'admin';
+
   UserModel copyWith({
     String? name,
     double? rating,
@@ -81,6 +92,8 @@ class UserModel {
     String? profilePic,
     String? address,
     bool? isBlocked,
+    String? blockReason,
+    int? badReviewsGiven,
     String? language,
     bool? isVisibleOnline,
   }) =>
@@ -94,6 +107,8 @@ class UserModel {
         profilePic: profilePic ?? this.profilePic,
         address: address ?? this.address,
         isBlocked: isBlocked ?? this.isBlocked,
+        blockReason: blockReason ?? this.blockReason,
+        badReviewsGiven: badReviewsGiven ?? this.badReviewsGiven,
         language: language ?? this.language,
         isVisibleOnline: isVisibleOnline ?? this.isVisibleOnline,
         createdAt: createdAt,

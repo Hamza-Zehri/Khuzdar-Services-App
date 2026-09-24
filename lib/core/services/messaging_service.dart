@@ -50,8 +50,19 @@ class MessagingService {
     }
 
     try {
-      // Save FCM token to Firestore
-      await _saveFcmToken();
+      // Save FCM token to Firestore once a user is signed in
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (user != null) _saveFcmToken(user.uid);
+      });
+
+      // Keep the token in sync whenever FCM rotates it
+      _fcm.onTokenRefresh.listen((newToken) {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) return;
+        FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'fcmToken': newToken,
+        });
+      });
 
       // Foreground message handling
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -63,23 +74,17 @@ class MessagingService {
     }
   }
 
-  Future<void> _saveFcmToken() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final token = await _fcm.getToken();
-    if (token != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'fcmToken': token,
-      });
+  Future<void> _saveFcmToken(String uid) async {
+    try {
+      final token = await _fcm.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'fcmToken': token,
+        });
+      }
+    } catch (e) {
+      debugPrint('Save FCM token error: $e');
     }
-
-    // Listen for token refresh
-    _fcm.onTokenRefresh.listen((newToken) {
-      FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'fcmToken': newToken,
-      });
-    });
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
@@ -111,9 +116,7 @@ class MessagingService {
     required String type, // 'message' | 'agreement' | 'job' | 'broadcast'
     String? relatedId, // chatId or jobId
   }) async {
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .add({
+    await FirebaseFirestore.instance.collection('notifications').add({
       'toUserId': toUserId,
       'title': title,
       'body': body,

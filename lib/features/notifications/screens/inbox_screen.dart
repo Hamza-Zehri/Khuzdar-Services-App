@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../shared/widgets/status_view.dart';
 
 class InboxScreen extends StatelessWidget {
   const InboxScreen({super.key});
@@ -31,15 +32,10 @@ class InboxScreen extends StatelessWidget {
                 final docs = snap.data?.docs ?? [];
 
                 if (docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.notifications_none, size: 64, color: AppColors.textHint),
-                        SizedBox(height: 16),
-                        Text('Koi nayi notification nahi hai'),
-                      ],
-                    ),
+                  return const EmptyView(
+                    icon: Icons.notifications_none,
+                    message: 'No notifications yet',
+                    detail: 'Updates about chats and jobs will appear here.',
                   );
                 }
 
@@ -53,28 +49,33 @@ class InboxScreen extends StatelessWidget {
 
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: isRead ? AppColors.surfaceVariant : AppColors.primaryLight,
+                        backgroundColor: isRead
+                            ? AppColors.surfaceVariant
+                            : AppColors.primaryLight,
                         child: Icon(
                           _getIcon(d['type']),
-                          color: isRead ? AppColors.textSecondary : Colors.white,
+                          color:
+                              isRead ? AppColors.textSecondary : Colors.white,
                           size: 20,
                         ),
                       ),
                       title: Text(
                         d['title'] ?? '',
                         style: TextStyle(
-                          fontWeight: isRead ? FontWeight.normal : FontWeight.w600,
+                          fontWeight:
+                              isRead ? FontWeight.normal : FontWeight.w600,
                         ),
                       ),
                       subtitle: Text(d['body'] ?? ''),
                       trailing: Text(
                         _formatTime(d['createdAt'] as Timestamp),
-                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textHint),
                       ),
                       onTap: () {
                         // Mark as read
                         docs[i].reference.update({'read': true});
-                        
+
                         final type = d['type'];
                         final relatedId = d['relatedId'];
 

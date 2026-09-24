@@ -34,7 +34,8 @@ class AgreementState {
         'contactVisible': contactVisible,
       };
 
-  AgreementState copyWith({bool? userAgreed, bool? providerAgreed, bool? contactVisible}) =>
+  AgreementState copyWith(
+          {bool? userAgreed, bool? providerAgreed, bool? contactVisible}) =>
       AgreementState(
         userAgreed: userAgreed ?? this.userAgreed,
         providerAgreed: providerAgreed ?? this.providerAgreed,
@@ -88,7 +89,8 @@ class ChatModel {
         'status': status.name,
         'agreement': agreement.toMap(),
         'createdAt': Timestamp.fromDate(createdAt),
-        'lastMessageAt': lastMessageAt != null ? Timestamp.fromDate(lastMessageAt!) : null,
+        'lastMessageAt':
+            lastMessageAt != null ? Timestamp.fromDate(lastMessageAt!) : null,
         'lastMessage': lastMessage,
       };
 

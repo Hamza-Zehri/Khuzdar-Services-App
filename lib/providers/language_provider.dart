@@ -28,8 +28,10 @@ class LanguageProvider extends ChangeNotifier {
   }
 
   String translate(String key, {List<String>? args}) {
-    String? text = Translations.data[_currentLocale]?[key] ?? Translations.data['en']?[key] ?? key;
-    
+    String? text = Translations.data[_currentLocale]?[key] ??
+        Translations.data['en']?[key] ??
+        key;
+
     if (args != null && args.isNotEmpty) {
       for (var arg in args) {
         text = text!.replaceFirst('{}', arg);

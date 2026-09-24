@@ -31,10 +31,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 CircleAvatar(
                   radius: 50,
                   backgroundColor: AppColors.primaryLight,
-                  backgroundImage: user.profilePic != null ? NetworkImage(user.profilePic!) : null,
+                  backgroundImage: user.profilePic != null
+                      ? NetworkImage(user.profilePic!)
+                      : null,
                   child: user.profilePic == null
-                      ? Text(user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
-                          style: const TextStyle(fontSize: 32, color: Colors.white))
+                      ? Text(
+                          user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                          style: const TextStyle(
+                              fontSize: 32, color: Colors.white))
                       : null,
                 ),
                 const SizedBox(height: 16),
@@ -44,7 +48,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   user.phone,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
                 if (user.address != null)
                   Padding(
@@ -58,7 +65,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ListTile(
                   leading: const Icon(Icons.language),
                   title: Text(context.isUrdu ? 'اردو (Urdu)' : 'English'),
-                  subtitle: Text(context.isUrdu ? 'English میں تبدیل کریں' : 'اردو میں تبدیل کریں'),
+                  subtitle: Text(context.isUrdu
+                      ? 'English میں تبدیل کریں'
+                      : 'اردو میں تبدیل کریں'),
                   onTap: () async {
                     final newLocale = context.isUrdu ? 'en' : 'ur';
                     await context.read<LanguageProvider>().setLocale(newLocale);
@@ -68,22 +77,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
-                  title: Text(context.isUrdu ? 'پروفائل تبدیل کریں' : 'Edit Profile'),
+                  title: Text(
+                      context.isUrdu ? 'پروفائل تبدیل کریں' : 'Edit Profile'),
                   onTap: () => _showEditDialog(context, auth),
                 ),
                 if (user.role == UserRole.admin)
                   ListTile(
-                    leading: const Icon(Icons.admin_panel_settings_outlined, color: Colors.orange),
+                    leading: const Icon(Icons.admin_panel_settings_outlined,
+                        color: Colors.orange),
                     title: Text(
                       context.isUrdu ? 'ایڈمن پینل' : 'Admin Panel',
-                      style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          color: Colors.orange, fontWeight: FontWeight.w600),
                     ),
                     onTap: () => context.push('/admin'),
                   ),
                 if (user.role == UserRole.provider)
                   ListTile(
                     leading: const Icon(Icons.swap_horiz),
-                    title: Text(context.tr(auth.isProviderMode ? 'switch_to_customer' : 'switch_to_provider')),
+                    title: Text(context.tr(auth.isProviderMode
+                        ? 'switch_to_customer'
+                        : 'switch_to_provider')),
                     onTap: () {
                       auth.toggleProviderMode();
                       Navigator.pop(context); // Go back home
@@ -91,12 +105,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )
                 else if (user.role == UserRole.customer)
                   ListTile(
-                    leading: const Icon(Icons.verified_user_outlined, color: AppColors.primary),
+                    leading: const Icon(Icons.verified_user_outlined,
+                        color: AppColors.primary),
                     title: Text(
-                      context.isUrdu ? 'سروس پرووائیڈر بنیں' : 'Become a Service Provider',
-                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                      context.isUrdu
+                          ? 'سروس پرووائیڈر بنیں'
+                          : 'Become a Service Provider',
+                      style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text(context.isUrdu ? 'رجسٹریشن کے لیے یہاں کلک کریں' : 'Click to submit registration'),
+                    subtitle: Text(context.isUrdu
+                        ? 'رجسٹریشن کے لیے یہاں کلک کریں'
+                        : 'Click to submit registration'),
                     onTap: () => context.push('/provider/register'),
                   ),
                 ListTile(
@@ -126,12 +147,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     height: 50,
                     child: OutlinedButton(
                       onPressed: _isLoggingOut ? null : _handleLogout,
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      style:
+                          OutlinedButton.styleFrom(foregroundColor: Colors.red),
                       child: _isLoggingOut
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                  color: Colors.red, strokeWidth: 2),
                             )
                           : Text(context.isUrdu ? 'لاگ آؤٹ' : 'Logout'),
                     ),
@@ -161,12 +184,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             TextField(
               controller: nameController,
-              decoration: InputDecoration(labelText: context.isUrdu ? 'نام' : 'Name'),
+              decoration:
+                  InputDecoration(labelText: context.isUrdu ? 'نام' : 'Name'),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: addressController,
-              decoration: InputDecoration(labelText: context.isUrdu ? 'پتہ (Address)' : 'Address'),
+              decoration: InputDecoration(
+                  labelText: context.isUrdu ? 'پتہ (Address)' : 'Address'),
             ),
           ],
         ),

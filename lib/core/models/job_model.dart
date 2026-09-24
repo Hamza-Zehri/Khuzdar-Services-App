@@ -43,6 +43,7 @@ class JobModel {
         'providerId': providerId,
         'status': status.name,
         'createdAt': Timestamp.fromDate(createdAt),
-        'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+        'completedAt':
+            completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       };
 }

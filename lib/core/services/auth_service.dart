@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,7 +12,8 @@ class AuthService {
   AuthService() {
     // Explicitly initialize with serverClientId to prevent "Sign in failed"
     _googleSignIn.initialize(
-      serverClientId: '462613436846-5fp1pbj1ghafhshi5le1ptfl86njntim.apps.googleusercontent.com',
+      serverClientId:
+          '462613436846-5fp1pbj1ghafhshi5le1ptfl86njntim.apps.googleusercontent.com',
     );
   }
 
@@ -27,12 +29,13 @@ class AuthService {
       // Note: In some versions this is required, in others it's internal.
       // But using .authenticate() on the instance is correct.
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
-      
+
       // In google_sign_in v7.x+, authentication is a getter and only contains idToken
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      
+
       // To get the accessToken, we use the authorizationClient
-      final authz = await googleUser.authorizationClient.authorizationForScopes(['email', 'profile']);
+      final authz = await googleUser.authorizationClient
+          .authorizationForScopes(['email', 'profile']);
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: authz?.accessToken,
@@ -52,25 +55,32 @@ class AuthService {
     required void Function(FirebaseAuthException e) onError,
     required void Function(PhoneAuthCredential credential) onAutoVerified,
   }) async {
+    // verifyPhoneNumber does NOT throw on verificationFailed, so we surface
+    // the failure through a Completer to prevent silently proceeding to OTP.
+    final failure = Completer<void>();
+
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
       verificationCompleted: onAutoVerified,
       verificationFailed: (FirebaseAuthException e) {
-        // Detailed internal logging
-        // debugPrint('🔥 Firebase Auth Error [${e.code}]: ${e.message}');
-        // if (e.code == 'app-not-authorized') {
-        //   debugPrint('TIP: This means SHA-1 fingerprints are missing in Firebase Console.');
-        // }
         onError(e);
+        if (!failure.isCompleted) {
+          failure.completeError(e);
+        }
       },
       codeSent: (String vid, int? resendToken) {
         _verificationId = vid;
-        // debugPrint('✅ OTP Sent successfully. ID: $vid');
         onCodeSent(vid);
       },
       codeAutoRetrievalTimeout: (_) {},
     );
+
+    if (!failure.isCompleted) {
+      failure.complete();
+    }
+
+    await failure.future;
   }
 
   // Step 2: Verify OTP
@@ -85,11 +95,13 @@ class AuthService {
 
   // Email/Password Auth
   Future<UserCredential> loginWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(email: email, password: password);
+    return await _auth.signInWithEmailAndPassword(
+        email: email, password: password);
   }
 
   Future<UserCredential> signUpWithEmail(String email, String password) async {
-    return await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    return await _auth.createUserWithEmailAndPassword(
+        email: email, password: password);
   }
 
   // Step 3: Create or fetch user profile in Firestore
@@ -117,9 +129,9 @@ class AuthService {
       createdAt: DateTime.now(),
     );
     await _db.collection('users').doc(uid).set(
-      user.toFirestore(),
-      SetOptions(merge: true),
-    );
+          user.toFirestore(),
+          SetOptions(merge: true),
+        );
     return user;
   }
 

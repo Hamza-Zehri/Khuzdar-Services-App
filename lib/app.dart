@@ -19,6 +19,8 @@ import 'features/notifications/screens/inbox_screen.dart';
 import 'features/rating/screens/rate_screen.dart';
 import 'features/auth/screens/blocked_screen.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart';
+import 'features/providers/screens/provider_profile_screen.dart';
+import 'features/jobs/screens/my_jobs_screen.dart';
 
 class KhuzdarMarketplaceApp extends StatelessWidget {
   const KhuzdarMarketplaceApp({super.key});
@@ -48,19 +50,26 @@ class KhuzdarMarketplaceApp extends StatelessWidget {
         }
 
         // Auth flow routes
-        if (!isLoggedIn && (loc == '/login' || loc.startsWith('/auth/') || loc == '/provider/register')) {
+        if (!isLoggedIn &&
+            (loc == '/login' ||
+                loc.startsWith('/auth/') ||
+                loc == '/provider/register')) {
           return null;
         }
 
         if (!isLoggedIn) return '/login';
-        
+
         // Blocking enforcement
         if (isLoggedIn && auth.user?.isBlocked == true && loc != '/blocked') {
           return '/blocked';
         }
 
         // If logged in but no profile, redirect to role selection
-        if (isLoggedIn && !hasProfile && loc != '/auth/role' && loc != '/provider/register' && loc != '/blocked') {
+        if (isLoggedIn &&
+            !hasProfile &&
+            loc != '/auth/role' &&
+            loc != '/provider/register' &&
+            loc != '/blocked') {
           return '/auth/role';
         }
 
@@ -68,21 +77,29 @@ class KhuzdarMarketplaceApp extends StatelessWidget {
         if (loc == '/admin' && auth.user?.role != UserRole.admin) {
           return '/home';
         }
-        
+
         return null;
       },
       routes: [
         GoRoute(path: '/login', builder: (_, __) => const EmailLoginScreen()),
-        GoRoute(path: '/auth/phone', builder: (_, state) {
-          final data = state.extra as Map<String, String>? ?? {};
-          return PhoneEntryScreen(registrationData: data);
-        }),
-        GoRoute(path: '/auth/otp', builder: (_, state) {
-          final data = state.extra as Map<String, String>? ?? {};
-          return OtpScreen(registrationData: data);
-        }),
-        GoRoute(path: '/auth/register', builder: (_, __) => const RegisterCredentialsScreen()),
-        GoRoute(path: '/auth/role', builder: (_, __) => const RoleSelectionScreen()),
+        GoRoute(
+            path: '/auth/phone',
+            builder: (_, state) {
+              final data = state.extra as Map<String, String>? ?? {};
+              return PhoneEntryScreen(registrationData: data);
+            }),
+        GoRoute(
+            path: '/auth/otp',
+            builder: (_, state) {
+              final data = state.extra as Map<String, String>? ?? {};
+              return OtpScreen(registrationData: data);
+            }),
+        GoRoute(
+            path: '/auth/register',
+            builder: (_, __) => const RegisterCredentialsScreen()),
+        GoRoute(
+            path: '/auth/role',
+            builder: (_, __) => const RoleSelectionScreen()),
         GoRoute(
           path: '/home',
           builder: (context, __) {
@@ -98,18 +115,35 @@ class KhuzdarMarketplaceApp extends StatelessWidget {
           builder: (_, state) =>
               ProviderListScreen(category: state.pathParameters['category']!),
         ),
-        GoRoute(path: '/provider/register', builder: (_, __) => const ProviderRegisterScreen()),
+        GoRoute(
+          path: '/providers/:category/:providerId',
+          builder: (_, state) => ProviderProfileScreen(
+            category: state.pathParameters['category']!,
+            providerId: state.pathParameters['providerId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/jobs',
+          builder: (_, __) => const MyJobsScreen(),
+        ),
+        GoRoute(
+            path: '/provider/register',
+            builder: (_, __) => const ProviderRegisterScreen()),
         GoRoute(
           path: '/chat/:chatId',
-          builder: (_, state) => ChatScreen(chatId: state.pathParameters['chatId']!),
+          builder: (_, state) =>
+              ChatScreen(chatId: state.pathParameters['chatId']!),
         ),
         GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-        GoRoute(path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
-        GoRoute(path: '/notifications', builder: (_, __) => const InboxScreen()),
+        GoRoute(
+            path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
+        GoRoute(
+            path: '/notifications', builder: (_, __) => const InboxScreen()),
         GoRoute(path: '/blocked', builder: (_, __) => const BlockedScreen()),
         GoRoute(
           path: '/rate/:jobId',
-          builder: (_, state) => RateScreen(jobId: state.pathParameters['jobId']!),
+          builder: (_, state) =>
+              RateScreen(jobId: state.pathParameters['jobId']!),
         ),
       ],
     );

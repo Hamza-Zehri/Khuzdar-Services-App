@@ -31,7 +31,7 @@ class AuthAppProvider extends ChangeNotifier {
       if (_user != null) {
         // SYNC LANGUAGE
         languageProvider?.setLocale(_user!.language);
-        
+
         if (_user!.isVisibleOnline) {
           await _presenceService.goOnline();
         }
@@ -80,6 +80,21 @@ class AuthAppProvider extends ChangeNotifier {
   Future<void> enableProviderMode() async {
     _isProviderMode = true;
     notifyListeners();
+  }
+
+  /// Starts (or reuses) a chat with a provider. Returns the chat id, or null.
+  Future<String?> startChatWith(String providerId) async {
+    if (uid == null) return null;
+    try {
+      final chat = await _firestoreService.startChat(
+        userId: uid!,
+        providerId: providerId,
+      );
+      return chat.id;
+    } catch (e) {
+      debugPrint('Start chat error: $e');
+      return null;
+    }
   }
 
   Future<void> toggleAvailability(bool isAvailable) async {
